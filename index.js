@@ -12,7 +12,6 @@ app.use(cors());
 
 const amazonAmdGpu = `https://www.amazon.com/s?k=RX+6800&rh=n%3A284822&ref=nb_sb_noss`;
 const amazonRtxGpu = `https://www.amazon.com/s?k=rtx+3070&rh=n%3A284822&ref=nb_sb_noss`;
-const baseURL = `https://www.amazon.com`;
 
 app.get("/test/", (req, res) => {
   const gpuList = [];
@@ -24,7 +23,7 @@ app.get("/test/", (req, res) => {
       const $ = load(html);
       $('a:contains("6800")', html).each(function () {
         const title = $(this).text();
-        const url = baseURL + $(this).attr("href");
+        const link = baseURL + $(this).attr("href");
         // const price = title.find(`span.a-price-whole`).text();
         gpuList.push({ title });
       });
@@ -34,33 +33,42 @@ app.get("/test/", (req, res) => {
 });
 
 app.get("/gpuList/", async (req, res) => {
+  const gpuList = [];
   try {
     const response = await fetch(amazonRtxGpu);
     const html = await response.text();
     const $ = load(html);
-    const gpuList = [];
     $(
       "div.sg-col.sg-col-4-of-12.sg-col-8-of-16.sg-col-12-of-20.s-list-col-right"
-    ).each((index, el) => {
+    ).map((index, el) => {
       const gpu = $(el);
       const title = gpu
-        .find(
-          "span.a-size-medium.a-color-base.a-text-normal"
-        )
+        .find("span.a-size-medium.a-color-base.a-text-normal")
         .text();
 
-      const price = gpu.find("span.a-price > span.a-offscreen").text()
-        ? gpu.find("span.a-price > span.a-offscreen").text()
-        : "no price";
-      const url =
-        baseURL +
-        gpu
-          .find("a.a-link-normal.s-underline-text.s-underline-link-text")
-          .attr("href");
-      gpuList.push({ title, price, url });
+      const gpuPrice = gpu.find("span.a-price > span.a-offscreen").text();
+      const price = gpuPrice ? gpuPrice : "no price listed";
+      const gpuLink = gpu
+        .find("a.a-link-normal.s-underline-text.s-underline-link-text")
+        .attr("href");
+      const link = `https://www.amazon.com${gpuLink}`;
+
+      const gpuRating = gpu
+        .find("div.a-section.a-spacing-none.a-spacing-top-micro > div")
+        .children("span")
+        .attr("aria-label");
+      const rating = gpuRating ? gpuRating : "no rating for this product";
+
+      const reviews = gpu
+        .find(
+          "div.a-section.a-spacing-none.a-spacing-top-micro > div.a-row.a-size-small > span"
+        )
+        .last()
+        .attr("aria-label");
+      gpuList.push({ title, price, link, rating, reviews });
     });
 
-    res.json({ gpuList });
+    res.status(200).json({ gpuList });
   } catch (err) {
     res.json({ message: "could not scrape", error: err.message });
   }
