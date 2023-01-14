@@ -10,25 +10,60 @@ const { load } = require("cheerio");
 dotenv.config();
 app.use(cors());
 
-app.get("/test/", async (req, res) => {
-  const amazonURL = `https://www.amazon.com/s?k=RX+6800&rh=n%3A284822&ref=nb_sb_noss`
-  const baseURL = `https://www.amazon.com`;
+const amazonAmdGpu = `https://www.amazon.com/s?k=RX+6800&rh=n%3A284822&ref=nb_sb_noss`;
+const amazonRtxGpu = `https://www.amazon.com/s?k=rtx+3070&rh=n%3A284822&ref=nb_sb_noss`;
+const baseURL = `https://www.amazon.com`;
+
+app.get("/test/", (req, res) => {
   const gpuList = [];
-  
-  await axios
-    .get(amazonURL)
+
+  axios
+    .get(amazonAmdGpu)
     .then((response) => {
       const html = response.data;
       const $ = load(html);
-      $('a:contains(ASUS TUF)', html).each(function () {
+      $('a:contains("6800")', html).each(function () {
         const title = $(this).text();
         const url = baseURL + $(this).attr("href");
-        // const price = $(this).
-        gpuList.push({ title, url });
+        // const price = title.find(`span.a-price-whole`).text();
+        gpuList.push({ title });
       });
       res.json(gpuList);
     })
     .catch((err) => console.log(err));
+});
+
+app.get("/gpuList/", async (req, res) => {
+  try {
+    const response = await fetch(amazonRtxGpu);
+    const html = await response.text();
+    const $ = load(html);
+    const gpuList = [];
+    $(
+      "div.sg-col.sg-col-4-of-12.sg-col-8-of-16.sg-col-12-of-20.s-list-col-right"
+    ).each((index, el) => {
+      const gpu = $(el);
+      const title = gpu
+        .find(
+          "span.a-size-medium.a-color-base.a-text-normal"
+        )
+        .text();
+
+      const price = gpu.find("span.a-price > span.a-offscreen").text()
+        ? gpu.find("span.a-price > span.a-offscreen").text()
+        : "no price";
+      const url =
+        baseURL +
+        gpu
+          .find("a.a-link-normal.s-underline-text.s-underline-link-text")
+          .attr("href");
+      gpuList.push({ title, price, url });
+    });
+
+    res.json({ gpuList });
+  } catch (err) {
+    res.json({ message: "could not scrape", error: err.message });
+  }
 });
 
 app.listen(PORT, () => console.log(`This server is running on PORT:${PORT}`));
