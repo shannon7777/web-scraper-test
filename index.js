@@ -39,33 +39,40 @@ app.get("/gpuList/", async (req, res) => {
     const html = await response.text();
     const $ = load(html);
     $(
-      "div.sg-col.sg-col-4-of-12.sg-col-8-of-16.sg-col-12-of-20.s-list-col-right"
+      "div.sg-col-20-of-24.s-result-item.s-asin.sg-col-0-of-12.sg-col-16-of-20.sg-col.s-widget-spacing-small.sg-col-12-of-16"
     ).map((index, el) => {
       const gpu = $(el);
+
       const title = gpu
         .find("span.a-size-medium.a-color-base.a-text-normal")
         .text();
 
       const gpuPrice = gpu.find("span.a-price > span.a-offscreen").text();
       const price = gpuPrice ? gpuPrice : "no price listed";
+
       const gpuLink = gpu
-        .find("a.a-link-normal.s-underline-text.s-underline-link-text")
+        .find(
+          "a.a-link-normal.s-underline-text.s-underline-link-text.s-link-style.a-text-normal"
+        )
         .attr("href");
       const link = `https://www.amazon.com${gpuLink}`;
 
       const gpuRating = gpu
-        .find("div.a-section.a-spacing-none.a-spacing-top-micro > div")
-        .children("span")
+        .find("div.a-section.a-spacing-none.a-spacing-top-micro > div > span")
         .attr("aria-label");
       const rating = gpuRating ? gpuRating : "no rating for this product";
 
-      const reviews = gpu
-        .find(
-          "div.a-section.a-spacing-none.a-spacing-top-micro > div.a-row.a-size-small > span"
-        )
+      const gpuReviews = gpu
+        .find("div.a-section.a-spacing-none.a-spacing-top-micro")
+        .children("div.a-row.a-size-small")
+        .children("span")
         .last()
         .attr("aria-label");
-      gpuList.push({ title, price, link, rating, reviews });
+      const reviews = gpuReviews ? gpuReviews : "no reviews";
+
+      const image = gpu.find("img.s-image").attr("src");
+      console.log(image);
+      gpuList.push({ title, price, link, rating, reviews, image });
     });
 
     res.status(200).json({ gpuList });
